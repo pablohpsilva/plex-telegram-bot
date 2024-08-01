@@ -1,0 +1,28 @@
+{
+  "name": "plex-telegram-bot",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc"
+  },
+  "keywords": [],
+  "author": "pablohpsilva-forjnetwork <pablohpsilva@forj.network>",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^1.7.3",
+    "dotenv": "^16.4.5",
+    "node-telegram-bot-api": "^0.66.0"
+  },
+  "devDependencies": {
+    "@types/node": "22.0.2",
+    "@types/node-telegram-bot-api": "0.64.7",
+    "@vitest/coverage-v8": "2.0.5",
+    "tsc": "2.0.4",
+    "typescript": "5.5.4",
+    "vite-tsconfig-paths": "4.3.2",
+    "vitest": "2.0.5"
+  },
+  "repository": "https://github.com/pablohpsilva/plex-telegram-bot.git"
+}
