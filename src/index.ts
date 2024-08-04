@@ -132,7 +132,12 @@ bot.onText(/\/track (.+)/, async (msg, match) => {
                 callback_data: `quality_${imdbId}_${profile.id}_${isSeries ? "sonarr" : "radarr"}`
             }));
 
-            delayResponse(chatId, "Select a quality profile:", {
+            delayResponse(chatId, `Select a quality profile:
+Any: fastest track. Use this for "not so important" medias;
+
+HD-1080p: Good quality, medium-speed track. It can track up to BluRay;
+
+Ultra-HD: Amazing quality, usually 4k or 8k. Slowest track. It can track REMUX quality or higher.`, {
                 reply_markup: {
                     inline_keyboard: [options]
                 }
