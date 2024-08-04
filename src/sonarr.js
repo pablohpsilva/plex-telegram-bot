@@ -35,6 +35,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.checkSeriesIMDB = checkSeriesIMDB;
 exports.isSeriesInSonarr = isSeriesInSonarr;
 exports.getSonarrQualityProfiles = getSonarrQualityProfiles;
 exports.addSeries = addSeries;
@@ -44,6 +45,23 @@ dotenv.config();
 // Load environment variables from .env file
 const SONARR_URL = process.env.SONARR_URL;
 const SONARR_API_KEY = process.env.SONARR_API_KEY;
+function checkSeriesIMDB(imdbId) {
+    return __awaiter(this, void 0, void 0, function* () {
+        var _a;
+        try {
+            const searchResponse = yield axios_1.default.get(`${SONARR_URL}/api/v3/series/lookup?term=imdb:${imdbId}`, {
+                headers: {
+                    'X-Api-Key': SONARR_API_KEY
+                }
+            });
+            console.log(searchResponse.data);
+            return (_a = searchResponse.data) === null || _a === void 0 ? void 0 : _a[0];
+        }
+        catch (error) {
+            console.error('Error querying Radarr API:', error);
+        }
+    });
+}
 // Function to check if the series is already in Sonarr
 function isSeriesInSonarr(imdbId) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -103,7 +121,7 @@ function addSeries(imdbId, qualityProfileId) {
                 images: seriesData.images,
                 tvdbId: seriesData.tvdbId,
                 year: seriesData.year,
-                rootFolderPath: '/path/to/your/series', // Change this to your series directory
+                rootFolderPath: '/Volumes/HDD2/TV Shows', // Change this to your series directory
                 monitored: true,
                 addOptions: {
                     searchForMissingEpisodes: true

@@ -6,6 +6,23 @@ dotenv.config();
 const RADARR_URL = process.env.RADARR_URL;
 const RADARR_API_KEY = process.env.RADARR_API_KEY;
 
+export async function checkMovieIMDB(imdbId: string) {
+    try {
+        // const searchResponse = await axios.get(`${RADARR_URL}/api/v3/series/lookup/tmdb?tmdbId=${imdbId}`, {
+        const searchResponse = await axios.get(`${RADARR_URL}/api/v3/movie/lookup?term=imdb:${imdbId}`, {
+            headers: {
+                'X-Api-Key': RADARR_API_KEY
+            }
+        });
+        console.log(searchResponse.data);
+
+        return searchResponse.data;
+    } catch (error) {
+        console.error('Error querying Radarr API:', error);
+    }
+}
+
+
 // Function to check if the movie is already in Radarr
 export async function isMovieInRadarr(imdbId: string): Promise<boolean> {
     try {
@@ -38,6 +55,18 @@ export async function getRadarrQualityProfiles() {
     }
 }
 
+export async function getMovieData(imdbId:string) {
+    const searchResponse = await axios.get(`${RADARR_URL}/api/v3/movie/lookup?term=imdb:${imdbId}`, {
+        headers: {
+            'X-Api-Key': RADARR_API_KEY
+        }
+    });
+
+    const movieData = searchResponse.data?.[0];
+
+    return movieData
+}
+
 // Function to add a movie to Radarr
 export async function addMovie(imdbId: string, qualityProfileId: number) {
     try {
@@ -46,13 +75,14 @@ export async function addMovie(imdbId: string, qualityProfileId: number) {
             return "Movie is already available.";
         }
 
-        const searchResponse = await axios.get(`${RADARR_URL}/api/v3/movie/lookup/imdb/${imdbId}`, {
-            headers: {
-                'X-Api-Key': RADARR_API_KEY
-            }
-        });
+        // const searchResponse = await axios.get(`${RADARR_URL}/api/v3/movie/lookup/imdb/${imdbId}`, {
+        //     headers: {
+        //         'X-Api-Key': RADARR_API_KEY
+        //     }
+        // });
 
-        const movieData = searchResponse.data;
+        // const movieData = searchResponse.data;
+        const movieData = await getMovieData(imdbId)
         if (!movieData) {
             return "Movie not found in Radarr database.";
         }
@@ -64,7 +94,7 @@ export async function addMovie(imdbId: string, qualityProfileId: number) {
             images: movieData.images,
             tmdbId: movieData.tmdbId,
             year: movieData.year,
-            rootFolderPath: '/path/to/your/movies', // Change this to your movies directory
+            rootFolderPath: '/Volumes/HDD2/Movies', // Change this to your movies directory
             monitored: true,
             addOptions: {
                 searchForMovie: true

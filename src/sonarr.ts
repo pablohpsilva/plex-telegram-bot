@@ -6,6 +6,21 @@ dotenv.config();
 const SONARR_URL = process.env.SONARR_URL;
 const SONARR_API_KEY = process.env.SONARR_API_KEY;
 
+export async function checkSeriesIMDB(imdbId: string) {
+    try {
+        const searchResponse = await axios.get(`${SONARR_URL}/api/v3/series/lookup?term=imdb:${imdbId}`, {
+            headers: {
+                'X-Api-Key': SONARR_API_KEY
+            }
+        });
+        console.log(searchResponse.data);
+
+        return searchResponse.data?.[0];
+    } catch (error) {
+        console.error('Error querying Radarr API:', error);
+    }
+}
+
 
 // Function to check if the series is already in Sonarr
 export async function isSeriesInSonarr(imdbId: string): Promise<boolean> {
@@ -65,7 +80,7 @@ export async function addSeries(imdbId: string, qualityProfileId: number) {
             images: seriesData.images,
             tvdbId: seriesData.tvdbId,
             year: seriesData.year,
-            rootFolderPath: '/path/to/your/series', // Change this to your series directory
+            rootFolderPath: '/Volumes/HDD2/TV Shows', // Change this to your series directory
             monitored: true,
             addOptions: {
                 searchForMissingEpisodes: true

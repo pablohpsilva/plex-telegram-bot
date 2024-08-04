@@ -35,8 +35,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.checkMovieIMDB = checkMovieIMDB;
 exports.isMovieInRadarr = isMovieInRadarr;
 exports.getRadarrQualityProfiles = getRadarrQualityProfiles;
+exports.getMovieData = getMovieData;
 exports.addMovie = addMovie;
 const axios_1 = __importDefault(require("axios"));
 const dotenv = __importStar(require("dotenv"));
@@ -44,6 +46,23 @@ dotenv.config();
 // Load environment variables from .env file
 const RADARR_URL = process.env.RADARR_URL;
 const RADARR_API_KEY = process.env.RADARR_API_KEY;
+function checkMovieIMDB(imdbId) {
+    return __awaiter(this, void 0, void 0, function* () {
+        try {
+            // const searchResponse = await axios.get(`${RADARR_URL}/api/v3/series/lookup/tmdb?tmdbId=${imdbId}`, {
+            const searchResponse = yield axios_1.default.get(`${RADARR_URL}/api/v3/movie/lookup?term=imdb:${imdbId}`, {
+                headers: {
+                    'X-Api-Key': RADARR_API_KEY
+                }
+            });
+            console.log(searchResponse.data);
+            return searchResponse.data;
+        }
+        catch (error) {
+            console.error('Error querying Radarr API:', error);
+        }
+    });
+}
 // Function to check if the movie is already in Radarr
 function isMovieInRadarr(imdbId) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -79,6 +98,18 @@ function getRadarrQualityProfiles() {
         }
     });
 }
+function getMovieData(imdbId) {
+    return __awaiter(this, void 0, void 0, function* () {
+        var _a;
+        const searchResponse = yield axios_1.default.get(`${RADARR_URL}/api/v3/movie/lookup?term=imdb:${imdbId}`, {
+            headers: {
+                'X-Api-Key': RADARR_API_KEY
+            }
+        });
+        const movieData = (_a = searchResponse.data) === null || _a === void 0 ? void 0 : _a[0];
+        return movieData;
+    });
+}
 // Function to add a movie to Radarr
 function addMovie(imdbId, qualityProfileId) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -87,12 +118,13 @@ function addMovie(imdbId, qualityProfileId) {
             if (exists) {
                 return "Movie is already available.";
             }
-            const searchResponse = yield axios_1.default.get(`${RADARR_URL}/api/v3/movie/lookup/imdb/${imdbId}`, {
-                headers: {
-                    'X-Api-Key': RADARR_API_KEY
-                }
-            });
-            const movieData = searchResponse.data;
+            // const searchResponse = await axios.get(`${RADARR_URL}/api/v3/movie/lookup/imdb/${imdbId}`, {
+            //     headers: {
+            //         'X-Api-Key': RADARR_API_KEY
+            //     }
+            // });
+            // const movieData = searchResponse.data;
+            const movieData = yield getMovieData(imdbId);
             if (!movieData) {
                 return "Movie not found in Radarr database.";
             }
@@ -103,7 +135,7 @@ function addMovie(imdbId, qualityProfileId) {
                 images: movieData.images,
                 tmdbId: movieData.tmdbId,
                 year: movieData.year,
-                rootFolderPath: '/path/to/your/movies', // Change this to your movies directory
+                rootFolderPath: '/Volumes/HDD2/Movies', // Change this to your movies directory
                 monitored: true,
                 addOptions: {
                     searchForMovie: true

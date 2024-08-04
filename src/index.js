@@ -35,20 +35,46 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const axios_1 = __importDefault(require("axios"));
 const dotenv = __importStar(require("dotenv"));
 const node_telegram_bot_api_1 = __importDefault(require("node-telegram-bot-api"));
 const sonarr_1 = require("./sonarr");
 const radarr_1 = require("./radarr");
 dotenv.config();
 // Load environment variables from .env file
-const RADARR_URL = process.env.RADARR_URL;
-const RADARR_API_KEY = process.env.RADARR_API_KEY;
-const SONARR_URL = process.env.SONARR_URL;
-const SONARR_API_KEY = process.env.SONARR_API_KEY;
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+const ALLOWED_KEYS = ["userkeyamazingworkz"];
 // Initialize the Telegram bot
 const bot = new node_telegram_bot_api_1.default(TELEGRAM_BOT_TOKEN, { polling: true });
+function delayResponse(chatId, message, options) {
+    setTimeout(() => {
+        bot.sendMessage(chatId, message, options);
+    }, 300);
+}
+function extractIMDBId(match) {
+    const imdbIdOrUrl = match;
+    const regex = /(tt\d+)/;
+    const imdbIdMatch = imdbIdOrUrl === null || imdbIdOrUrl === void 0 ? void 0 : imdbIdOrUrl.match(regex);
+    const imdbId = imdbIdMatch && (imdbIdMatch === null || imdbIdMatch === void 0 ? void 0 : imdbIdMatch[1]) ? imdbIdMatch[1] : undefined;
+    return imdbId;
+}
+function extractAllowedKeys(match) {
+    const imdbIdOrUrl = match;
+    const regex = /^(\S+)/;
+    const userKeyMatch = imdbIdOrUrl === null || imdbIdOrUrl === void 0 ? void 0 : imdbIdOrUrl.match(regex);
+    const userKey = userKeyMatch && (userKeyMatch === null || userKeyMatch === void 0 ? void 0 : userKeyMatch[1]) ? userKeyMatch[1] : undefined;
+    return userKey;
+}
+function isMediaTracked(imdbId) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const seriesExists = yield (0, sonarr_1.isSeriesInSonarr)(imdbId);
+        const movieExists = yield (0, radarr_1.isMovieInRadarr)(imdbId);
+        return {
+            exists: seriesExists || movieExists,
+            seriesExists,
+            movieExists
+        };
+    });
+}
 // Function to determine if the IMDb ID is a movie or series and check availability
 function checkMedia(imdbId) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -62,7 +88,7 @@ function checkMedia(imdbId) {
                 return "Movie is already available.";
             }
             else {
-                return "Movie/TV Show is NOT available, but can be put on the download list.";
+                return "Media is not available. You CAN track it.";
             }
         }
         catch (error) {
@@ -72,23 +98,13 @@ function checkMedia(imdbId) {
     });
 }
 // Function to determine if the IMDb ID is a movie or series and add it
-function addMedia(imdbId, qualityProfileId) {
+function addMedia(imdbId, qualityProfileId, service) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            const searchSeriesResponse = yield axios_1.default.get(`${SONARR_URL}/api/v3/series/lookup?term=imdb:${imdbId}`, {
-                headers: {
-                    'X-Api-Key': SONARR_API_KEY
-                }
-            });
-            const searchMovieResponse = yield axios_1.default.get(`${RADARR_URL}/api/v3/movie/lookup/imdb/${imdbId}`, {
-                headers: {
-                    'X-Api-Key': RADARR_API_KEY
-                }
-            });
-            if (searchSeriesResponse.data.length > 0) {
+            if (service === "sonarr") {
                 return yield (0, sonarr_1.addSeries)(imdbId, qualityProfileId);
             }
-            else if (searchMovieResponse.data) {
+            else if (service === "radarr") {
                 return yield (0, radarr_1.addMovie)(imdbId, qualityProfileId);
             }
             else {
@@ -104,40 +120,94 @@ function addMedia(imdbId, qualityProfileId) {
 // Telegram bot command to check media availability
 bot.onText(/\/check (.+)/, (msg, match) => __awaiter(void 0, void 0, void 0, function* () {
     const chatId = msg.chat.id;
-    // @ts-expect-error
-    const imdbId = match[1];
-    const result = yield checkMedia(imdbId);
-    bot.sendMessage(chatId, result);
+    const imdbId = extractIMDBId(match === null || match === void 0 ? void 0 : match[1]);
+    if (imdbId) {
+        const result = yield checkMedia(imdbId);
+        bot.sendMessage(chatId, result);
+        return;
+    }
+    delayResponse(chatId, "IMDB.com ID or URL is invalid. Provide an ID starting with 'tt' (e.g. tt0903747) or an IMDB url of a movie or tv show");
+    // bot.sendMessage(chatId, "IMDB.com ID or URL is invalid. Provide an ID starting with 'tt' (e.g. tt0903747) or an IMDB url of a movie or tv show");
 }));
 // Telegram bot command to add media
-bot.onText(/\/download (.+)/, (msg, match) => __awaiter(void 0, void 0, void 0, function* () {
+bot.onText(/\/track (.+)/, (msg, match) => __awaiter(void 0, void 0, void 0, function* () {
     const chatId = msg.chat.id;
+    const imdbId = extractIMDBId(match === null || match === void 0 ? void 0 : match[1]);
+    // console.log("match?.[1]", match?.[1])
+    // const userHasKey = ALLOWED_KEYS.includes(match?.[1])
+    // console.log("extractAllowedKeys(match?.[1])", extractAllowedKeys(match?.[1]))
     // @ts-expect-error
-    const imdbId = match[1];
-    const mediaAvailable = yield checkMedia(imdbId);
-    if (mediaAvailable.includes("available")) {
-        bot.sendMessage(chatId, mediaAvailable);
+    const userHasKey = ALLOWED_KEYS.includes(extractAllowedKeys(match === null || match === void 0 ? void 0 : match[1]));
+    if (imdbId && userHasKey) {
+        const { exists, movieExists } = yield isMediaTracked(imdbId);
+        console.log({ exists, movieExists });
+        if (exists) {
+            bot.sendMessage(chatId, "Media is available");
+        }
+        else {
+            // const profiles = await Promise.all([getRadarrQualityProfiles(), getSonarrQualityProfiles()]);
+            const isSeries = yield (0, sonarr_1.checkSeriesIMDB)(imdbId);
+            const profiles = yield (Boolean(isSeries) ? (0, sonarr_1.getSonarrQualityProfiles)() : (0, radarr_1.getRadarrQualityProfiles)());
+            // @ts-expect-error
+            const qualityProfiles = profiles.flat().filter(({ name }) => ['any', 'hd-1080p', 'ultra-hd'].includes(name.toLowerCase()));
+            // @ts-expect-error
+            const options = qualityProfiles.map(profile => ({
+                text: `${profile.name}`,
+                callback_data: `quality_${imdbId}_${profile.id}_${isSeries ? "sonarr" : "radarr"}`
+            }));
+            delayResponse(chatId, "Select a quality profile:", {
+                reply_markup: {
+                    inline_keyboard: [options]
+                }
+            });
+            // bot.sendMessage(chatId, "Select a quality profile:", {
+            //     reply_markup: {
+            //         inline_keyboard: [options]
+            //     }
+            // });
+        }
+        return;
     }
-    else {
-        const profiles = yield Promise.all([(0, radarr_1.getRadarrQualityProfiles)(), (0, sonarr_1.getSonarrQualityProfiles)()]);
-        const qualityProfiles = profiles.flat();
-        const options = qualityProfiles.map(profile => ({
-            text: `${profile.id} (${profile.name})`,
-            callback_data: `quality_${imdbId}_${profile.id}`
-        }));
-        bot.sendMessage(chatId, "Select a quality profile:", {
-            reply_markup: {
-                inline_keyboard: [options]
-            }
-        });
+    if (!userHasKey) {
+        delayResponse(chatId, `[You shall not pass!!!](https://i.giphy.com/media/v1.Y2lkPTc5MGI3NjExcW12OXRvaDVtbHN0eTF0aWx2enAwNmF2cW40M3owZXFmYXFpM2ZwcyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/8abAbOrQ9rvLG/giphy.gif)`, { parse_mode: 'Markdown' });
+        return;
     }
+    delayResponse(chatId, "IMDB.com ID or URL is invalid. Provide an ID starting with 'tt' (e.g. tt0903747) or an IMDB url of a movie or tv show");
 }));
 // Handle quality profile selection
 bot.on('callback_query', (callbackQuery) => __awaiter(void 0, void 0, void 0, function* () {
     const msg = callbackQuery.message;
     // @ts-expect-error
-    const [, imdbId, profileId] = callbackQuery.data.split('_');
-    const result = yield addMedia(imdbId, parseInt(profileId));
+    const [, imdbId, profileId, service] = callbackQuery.data.split('_');
+    console.log([, imdbId, profileId, service]);
     // @ts-expect-error
-    bot.sendMessage(msg.chat.id, result);
+    const result = yield addMedia(imdbId, parseInt(profileId), service);
+    // @ts-expect-error
+    // bot.sendMessage(msg.chat.id, result);
+    delayResponse(msg.chat.id, result);
 }));
+// Telegram bot command to check media availability
+bot.onText(/\/help/, (msg, match) => __awaiter(void 0, void 0, void 0, function* () {
+    const chatId = msg.chat.id;
+    // const imdbId = match[1];
+    // const result = await checkMedia(imdbId);
+    // bot.sendMessage(chatId, result);
+    bot.sendMessage(chatId, `Here's a list of all commands you can use:
+
+/check {IMDBID/IMDB URL}.
+Description: Check if media is tracked.
+Example:
+  /check tt0903747
+  /check https://m.imdb.com/title/tt0903747
+
+
+/track {userkey} {IMDBID/IMDB URL}
+Description: Track media via Plex.
+Example:
+  /track ukey-* tt0903747
+`);
+}));
+// // Handle quality profile selection
+// bot.on('message', async (msg) => {
+//     console.log(msg)
+// });
