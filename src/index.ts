@@ -130,7 +130,11 @@ bot.onText(/\/track (.+)/, async (msg, match) => {
             const options = qualityProfiles.map(profile => ({
                 text: `${profile.name}`,
                 callback_data: `quality_${imdbId}_${profile.id}_${isSeries ? "sonarr" : "radarr"}`
-            }));
+            }))
+            .concat([{
+                text: `Cancel`,
+                callback_data: `cancel_cancel_cancel_cancel`
+            }]);
 
             delayResponse(chatId, `Select a quality profile:
 Any: fastest track. Use this for "not so important" medias;
@@ -167,6 +171,12 @@ bot.on('callback_query', async (callbackQuery) => {
     const [, imdbId, profileId, service] = callbackQuery.data.split('_');
 
     console.log([, imdbId, profileId, service])
+
+    if(imdbId === "cancel") {
+        // @ts-expect-error
+        delayResponse(msg.chat.id, `Cancelled`)
+        return
+    }
 
     // @ts-expect-error
     const result = await addMedia(imdbId, parseInt(profileId), service);
