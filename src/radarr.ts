@@ -86,6 +86,8 @@ export async function addMovie(imdbId: string, qualityProfileId: number) {
         if (!movieData) {
             return "Movie not found in Radarr database.";
         }
+        const isDocumentary = movieData.genres.map((i:string) => i.toLowerCase()).includes("documentary")
+        const rootFolderPath = isDocumentary ? '/Volumes/SSD2/Documentaries' : '/Volumes/HDD2/Movies'
 
         await axios.post(`${RADARR_URL}/api/v3/movie`, {
             title: movieData.title,
@@ -94,7 +96,7 @@ export async function addMovie(imdbId: string, qualityProfileId: number) {
             images: movieData.images,
             tmdbId: movieData.tmdbId,
             year: movieData.year,
-            rootFolderPath: '/Volumes/HDD2/Movies', // Change this to your movies directory
+            rootFolderPath,
             monitored: true,
             addOptions: {
                 searchForMovie: true

@@ -147,6 +147,7 @@ bot.onText(/\/track (.+)/, (msg, match) => __awaiter(void 0, void 0, void 0, fun
         else {
             // const profiles = await Promise.all([getRadarrQualityProfiles(), getSonarrQualityProfiles()]);
             const isSeries = yield (0, sonarr_1.checkSeriesIMDB)(imdbId);
+            console.log("isSeries", isSeries);
             const profiles = yield (Boolean(isSeries) ? (0, sonarr_1.getSonarrQualityProfiles)() : (0, radarr_1.getRadarrQualityProfiles)());
             // @ts-expect-error
             const qualityProfiles = profiles.flat().filter(({ name }) => ['any', 'hd-1080p', 'ultra-hd'].includes(name.toLowerCase()));
