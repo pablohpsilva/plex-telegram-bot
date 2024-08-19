@@ -1,8 +1,7 @@
-import axios from 'axios';
 import * as dotenv from 'dotenv';
 import TelegramBot from 'node-telegram-bot-api';
 import { addSeries, checkSeriesIMDB, getSonarrQualityProfiles, isSeriesInSonarr } from './sonarr';
-import { addMovie, checkMovieIMDB, getMovieData, getRadarrQualityProfiles, isMovieInRadarr } from './radarr';
+import { addMovie, getRadarrQualityProfiles, isMovieInRadarr } from './radarr';
 dotenv.config();
 
 // Load environment variables from .env file
